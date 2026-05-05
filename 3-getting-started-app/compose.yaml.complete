@@ -1,0 +1,73 @@
+services:
+  app:
+    image: node:24-alpine
+    command: sh -c "npm install && npm run dev"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"] # check if app is responding on port 3000
+      interval: 10s
+      retries: 5
+      timeout: 3s
+      start_period: 10s
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 250M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - 127.0.0.1:3000:3000
+    working_dir: /app
+    volumes:
+      - ./:/app
+    # all environment variables can be set in .env file and referenced here with env_file
+    env_file:
+      - .env
+  mysql:
+    image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5 
+      timeout: 3s
+      start_period: 10s
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 250M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - todo-mysql-data:/var/lib/mysql
+    # environment variables for mysql can also be set here instead of env_file in app service
+    env_file:
+      - .env
+    # not usual to redeclare environment variables from .env file here
+    # but shown for demonstration purposes or more explicit configuration
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+
+volumes:
+  todo-mysql-data:
