@@ -3,6 +3,7 @@ include:
   - app2/compose.yml
   - nginx/compose.yml
   - traefik/compose.yml
+  - portainer/compose.yml
 
 # global compose file which is declaring this network reused by all services in different compose files
 networks:
