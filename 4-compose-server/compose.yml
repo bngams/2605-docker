@@ -1,0 +1,10 @@
+include:
+  - app1/compose.yml
+  - app2/compose.yml
+  - nginx/compose.yml
+
+# global compose file which is declaring this network reused by all services in different compose files
+networks:
+  public_net:
+    name: public_net
+    driver: bridge

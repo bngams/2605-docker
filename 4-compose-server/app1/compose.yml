@@ -1,0 +1,83 @@
+services:
+  app1:
+    depends_on:
+      db1:
+        condition: service_healthy
+        # dependance avancée
+        # si app1 redmérrare => redémarrer db1 
+        # restart: true
+    
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+      resources:
+        limits:
+          # pour 1 core CPU 
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 250M
+
+    # use image and command directly OR ...
+    # image: node:22-alpine
+    # command: sh -c "npm install && npm run start"
+    # volumes:
+    #  - ./:/app
+    # working_dir: /app
+
+    # Use build OR ...
+    image: app1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # docker run --name app1 -p 127.0.0.1:3000:3000 -e DB_HOST ... --network app1_net -d app1
+    container_name: app1
+    ports:
+      - 127.0.0.1:3000:3000
+    env_file:
+      - .env
+    environment:
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE}
+    networks:
+      - app1_net
+  db1:
+    image: mysql:8.0
+    hostname: mysql
+    env_file:
+      - .env
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # pour 1 core CPU 
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 250M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - app1_net
+
+networks:
+  app1_net:
+    name: app1_net
+
+  # public_net is external and shared with other services in different compose files
+  # if global compose file is used, we can declare it as external here and reference it in other compose files without redeclaring
+  # public_net:
+  #   external: true
+  #   name: public_net

@@ -1,0 +1,32 @@
+services:
+  app2:
+    image: traefik/whoami:latest
+    ports:
+      - 8282:80
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 250M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - public_net
+      - app2_net
+
+networks:
+  app2_net:
+    driver: bridge
+  # global compose file which is declaring this one
+  # public_net:
+  #   name: public_net
+  #   external: true
+      
