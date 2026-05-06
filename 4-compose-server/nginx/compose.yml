@@ -24,8 +24,8 @@ services:
       - public_net
 
 # global compose file which is declaring this one
-networks:
-  public_net:
-    name: public_net
-    external: true
+# networks:
+  # public_net:
+  #   name: public_net
+  #   external: true
       

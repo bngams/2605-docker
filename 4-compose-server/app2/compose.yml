@@ -25,9 +25,10 @@ services:
 
 networks:
   app2_net:
+    name: app2_net
     driver: bridge
   # global compose file which is declaring this one
-  public_net:
-    name: public_net
-    external: true
+  # public_net:
+  #   name: public_net
+  #   external: true
       

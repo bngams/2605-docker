@@ -84,6 +84,6 @@ networks:
 
   # public_net is external and shared with other services in different compose files
   # if global compose file is used, we can declare it as external here and reference it in other compose files without redeclaring
-  public_net:
-    external: true
-    name: public_net
+  # public_net:
+    # external: true
+    # name: public_net
