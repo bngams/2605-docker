@@ -1,21 +1,35 @@
+# portainer
 services:
   portainer:
-    profiles:
-      - portainer
-    container_name: portainer
-    image: portainer/portainer-ce:sts
-    restart: always
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - "9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
-    ports:
-      - 9443:9443
-      - 8000:8000  # Remove if you do not intend to use Edge Agents
+    networks:
+      - public_net
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
 
 volumes:
   portainer_data:
     name: portainer_data
-
-networks:
-  default:
-    name: portainer_network

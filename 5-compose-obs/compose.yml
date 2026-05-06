@@ -1,0 +1,185 @@
+services:
+  app1:
+    image: nginx:latest
+    ports:
+      - "8081:80"
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - public
+      - internal
+  app2:
+    image: nginx:latest
+    ports:
+      - "8082:80"
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+    networks:
+      - public
+      - internal
+  app3:
+    image: nginx:latest
+    ports:
+      - "8083:80"
+    networks:
+      - public
+      - internal
+    # No logging labels for this service, so it won't be scraped by promtail
+  
+  # loki service to store logs collected by promtail
+  loki: 
+    profiles:
+      - promtail 
+      - alloy
+    hostname: loki
+    image: grafana/loki:latest
+    ports:
+      - 3100:3100
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - internal
+
+  # promtail service to collect logs from app1 and app2
+  promtail:
+    profiles:
+      - promtail
+    hostname: promtail
+    image: grafana/promtail:latest
+    volumes:
+      - ./config/promtail.yaml:/etc/promtail/config.yaml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - internal
+  
+  # profile alloy
+  alloy:
+    profiles:
+      - alloy
+    image: grafana/alloy:latest
+    container_name: alloy
+    privileged: true
+    volumes:
+      - ./config/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/log:/var/log:ro
+    ports:
+      - "12345:12345"
+    networks:
+      - internal
+  
+  # profile prometheus
+  prometheus:
+    profiles:
+      - prometheus
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    networks:
+      - internal
+  
+  node-exporter:
+    profiles:
+      - prometheus
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+    networks:
+      - internal
+
+  cadvisor:
+    profiles:
+      - prometheus
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - 8080
+    networks:
+      - internal
+
+  # profile telegraf
+  telegraf:
+    profiles:
+      - influx
+    image: telegraf
+    hostname: telegraf
+    container_name: telegraf
+    user: "telegraf:0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/telegraf.conf:/etc/telegraf/telegraf.conf
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - internal
+
+  influxdb:
+    profiles:
+      - influx
+    image: influxdb
+    hostname: influxdb
+    container_name: influxdb
+    environment:
+      # InfluxDB v2.x configuration
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminadminadminadmin
+      - DOCKER_INFLUXDB_INIT_ORG=myorg
+      - DOCKER_INFLUXDB_INIT_BUCKET=telegraf
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=mytoken123456789mytoken123456789
+      # InfluxDB v1.x configuration (commented)
+      # - INFLUXDB_DB=telegraf
+      # - INFLUXDB_ADMIN_USER=admin
+      # - INFLUXDB_ADMIN_PASSWORD=adminadminadminadmin
+      # - INFLUXDB_USER=telegraf
+      # - INFLUXDB_USER_PASSWORD=metricsmetricsmetricsmetrics
+    ports:
+      - "8086:8086"
+    networks:
+      - internal
+
+
+  # grafana service to visualize logs stored in loki
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 3030:3000
+    volumes:
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yaml
+    environment:
+      # testing mode without account...
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    networks:
+      - internal
+      - public
+
+networks:
+  public:
+    driver: bridge
+  internal:
+    driver: bridge
