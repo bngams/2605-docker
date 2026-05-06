@@ -1,8 +1,9 @@
 services:
   app2:
     image: traefik/whoami:latest
+    hostname: app2
     ports:
-      - 8282:80
+      - 127.0.0.1:8282:80
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -26,7 +27,7 @@ networks:
   app2_net:
     driver: bridge
   # global compose file which is declaring this one
-  # public_net:
-  #   name: public_net
-  #   external: true
+  public_net:
+    name: public_net
+    external: true
       

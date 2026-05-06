@@ -1,12 +1,16 @@
 services:
   app1:
+    # /!\ ordre de démarrage et lancement avec conditions
+    # attendre que db1 soit opérationnel
     depends_on:
+      # nom du service et condition de dépendance
       db1:
         condition: service_healthy
         # dependance avancée
         # si app1 redmérrare => redémarrer db1 
         # restart: true
     
+    # Règles de cycle de vie
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -33,6 +37,7 @@ services:
       dockerfile: Dockerfile
     # docker run --name app1 -p 127.0.0.1:3000:3000 -e DB_HOST ... --network app1_net -d app1
     container_name: app1
+    hostname: app1
     ports:
       - 127.0.0.1:3000:3000
     env_file:
@@ -43,6 +48,7 @@ services:
       DB_NAME: ${MYSQL_DATABASE}
     networks:
       - app1_net
+      - public_net
   db1:
     image: mysql:8.0
     hostname: mysql
@@ -78,6 +84,6 @@ networks:
 
   # public_net is external and shared with other services in different compose files
   # if global compose file is used, we can declare it as external here and reference it in other compose files without redeclaring
-  # public_net:
-  #   external: true
-  #   name: public_net
+  public_net:
+    external: true
+    name: public_net

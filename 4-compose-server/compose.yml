@@ -7,4 +7,4 @@ include:
 networks:
   public_net:
     name: public_net
-    driver: bridge
+    external: true
